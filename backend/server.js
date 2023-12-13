@@ -169,6 +169,26 @@ app.put("/groupement/:id", (req, res) => {
       });
     });
   });
+  // POST endpoint to add a new envoi
+  app.post("/envoi", (req, res) => {
+    const { Env_num, Env_poids, Env_exp, Env_dest } = req.body;
+  
+    // Get the current date and time
+    const currentDate = new Date();
+    const formattedDate = currentDate.toISOString().slice(0, 19).replace("T", " ");
+  
+    const sql = "INSERT INTO envoi (Env_num, Env_poids, Env_exp, Env_dest) VALUES (?, ?, ?, ?)";
+db.query(sql, [Env_num, Env_poids, Env_exp, Env_dest], (err, result) => {
+  if (err) {
+    console.error("Error adding envoi:", err);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+  return res.status(201).json({ message: "Envoi added successfully", envoiId: result.insertId });
+});
+
+  });
+  
+
   
   
   
