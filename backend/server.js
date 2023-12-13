@@ -30,13 +30,15 @@ app.get("/groupement", (req, res) => {
     return res.json(data);
   });
 });
-app.get("/utilisateur", (rea, res) => {
+
+app.get("/utilisateur", (req, res) => {
   const usersql = "SELECT * FROM utilisateur"
   db.query(usersql,(err, data) => {
     if (err) return res.status(500).json({error : "oay lelena"});
     return res.json(data)
   })
 })
+
 app.get("/admin", (req,res) => {
   const adminsql = "SELECT * FROM adinistrator"
   db.query(adminsql,(err, data) => {
@@ -45,6 +47,29 @@ app.get("/admin", (req,res) => {
   })
 })
 
+app.get("/benefs", (req, res) => {
+  const benefsql = "SELECT * FROM béneficiaire"
+  db.query(benefsql,(err, data) => {
+    if(err) return res.status(500).json({error:"internal Server Error"});
+    return res.json(data)
+  })
+})
+
+app.get("/envoi", (req, res) => {
+  const envoisql = "SELECT *FROM envoi"
+  db.query(envoisql,(err, data) => {
+    if (err) return res.status(500).json({error : "internal Server Error"});
+    return res.json(data)
+  })
+})
+
+app.get("/fonction", (req, res) => {
+  const functionsql = "SELECT * FROM fonction"
+  db.query(functionsql,(err, data) => {
+    if (err) return res.status(500).json({error :"internal Server Error"});
+    return res.json(data)
+  })
+})
 // POST endpoint to add a new group
 
 app.post("/groupement", (req, res) => {
@@ -84,6 +109,38 @@ app.post("/groupement", (req, res) => {
       res.json({ message: "Group deleted successfully" });
     });
   });
+
+  // Update a group
+app.put("/groupement/:id", (req, res) => {
+  const groupId = req.params.id;
+  const { Grp_nom, Grp_code, Grp_adresse, Grp_responsable, Grp_contact, Grp_type } = req.body;
+
+  // Validation
+  if (!Grp_nom || !Grp_code || !Grp_adresse || !Grp_responsable || !Grp_contact || !Grp_type) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // Update SQL query
+  const sql = `
+    UPDATE groupement
+    SET Grp_nom = ?, Grp_code = ?, Grp_adresse = ?, Grp_responsable = ?, Grp_contact = ?, Grp_type = ?
+    WHERE Grp_id = ?`;
+
+  db.query(sql, [Grp_nom, Grp_code, Grp_adresse, Grp_responsable, Grp_contact, Grp_type, groupId], (err, result) => {
+    if (err) {
+      console.error("Error updating group:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+
+    if (result.affectedRows === 0) {
+      // If no rows were affected, the group with the specified ID was not found
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    res.json({ message: "Group updated successfully" });
+  });
+});
+
   app.post("/utilisateur", (req, res) => {
     const { Us_nom, Us_matricule, Us_login, Us_mail, Us_pwd, Fo_id, Grp_id } = req.body;
   
@@ -99,11 +156,9 @@ app.post("/groupement", (req, res) => {
         return res.status(500).json({ error: "Internal Server Error" });
       }
   
-      const userId = result.insertId;
-  
       // Fetch the added user based on the userId
       const fetchUserSql = "SELECT * FROM utilisateur WHERE Us_id = ?";
-      db.query(fetchUserSql, [userId], (fetchErr, userData) => {
+      db.query(fetchUserSql, [result.insertId], (fetchErr, userData) => {
         if (fetchErr) {
           console.error("Error fetching added user:", fetchErr);
           return res.status(500).json({ error: "Internal Server Error" });
@@ -114,6 +169,8 @@ app.post("/groupement", (req, res) => {
       });
     });
   });
+  
+  
   
   
   // Delete a user
