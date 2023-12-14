@@ -10,7 +10,8 @@ const db = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "",
-  database: "recommandation"
+  database: "recommandation",
+  timezone : "utc"
 });
 
 // GET endpoint to retrieve users
@@ -63,13 +64,15 @@ app.get("/envoi", (req, res) => {
   })
 })
 
-app.get("/fonction", (req, res) => {
+
+app.get("/fonctions", (req, res) => {
   const functionsql = "SELECT * FROM fonction"
   db.query(functionsql,(err, data) => {
     if (err) return res.status(500).json({error :"internal Server Error"});
     return res.json(data)
   })
 })
+
 // POST endpoint to add a new group
 
 app.post("/groupement", (req, res) => {
@@ -171,22 +174,28 @@ app.put("/groupement/:id", (req, res) => {
   });
   // POST endpoint to add a new envoi
   app.post("/envoi", (req, res) => {
-    const { Env_num, Env_poids, Env_exp, Env_dest } = req.body;
+    const { Env_num, Env_poids, Env_exp, Env_dest, Env_date_depot } = req.body;
+  
+    // Log the received Env_date_depot
+    console.log('Received Env_date_depot:', Env_date_depot);
   
     // Get the current date and time
     const currentDate = new Date();
     const formattedDate = currentDate.toISOString().slice(0, 19).replace("T", " ");
   
-    const sql = "INSERT INTO envoi (Env_num, Env_poids, Env_exp, Env_dest) VALUES (?, ?, ?, ?)";
-db.query(sql, [Env_num, Env_poids, Env_exp, Env_dest], (err, result) => {
-  if (err) {
-    console.error("Error adding envoi:", err);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
-  return res.status(201).json({ message: "Envoi added successfully", envoiId: result.insertId });
-});
-
+    const sql = "INSERT INTO envoi (Env_num, Env_poids, Env_exp, Env_dest, Env_date_depot) VALUES (?, ?, ?, ?, ?)";
+    db.query(sql, [Env_num, Env_poids, Env_exp, Env_dest, Env_date_depot], (err, result) => {
+      if (err) {
+        console.error("Error adding envoi:", err);
+  
+        // Send the error details in the response for debugging purposes
+        return res.status(500).json({ error: "Internal Server Error", details: err });
+      }
+  
+      return res.status(201).json({ message: "Envoi added successfully", envoiId: result.insertId });
+    });
   });
+  
   
 
   
