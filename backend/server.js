@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql');
+const multer = require('multer');
+const path = require('path');
+const upload = multer({ dest: 'uploads/' });
 
 const app = express();
 app.use(cors());
@@ -14,6 +17,24 @@ const db = mysql.createConnection({
   timezone : "utc"
 });
 
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Specify the directory where you want to store the uploaded files
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // Rename the file with a timestamp and its original extension
+  },
+});
+
+
+db.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL:', err);
+    return;
+  }
+  console.log('Connected to MySQL');
+});
 // GET endpoint to retrieve users
 app.get("/users", (req, res) => {
   const sql = "SELECT * FROM utilisateur";
@@ -195,13 +216,20 @@ app.put("/groupement/:id", (req, res) => {
       return res.status(201).json({ message: "Envoi added successfully", envoiId: result.insertId });
     });
   });
-  
-  
+   
+  app.post("/benefs", (req, res) => {
+    const { Grp_code, Ben_Nom, Ben_Addresse, Ben_code } = req.body;
+    const sql = "INSERT INTO béneficiaire (Grp_code, Ben_Nom, Ben_Addresse, Ben_code) VALUES (?,?,?,?)";
+    db.query(sql, [Grp_code, Ben_Nom, Ben_Addresse, Ben_code], (err, result) => {
+        if (err) {
+            console.error("Error adding beneficiaire :", err);
+            return res.status(500).json({ error: "internal Server Error", details: err });
+        }
+        return res.status(201).json({ message: "beneficiaire added successfully", beneficiaireId: result.insertId });
+    });
+});
 
-  
-  
-  
-  
+
   // Delete a user
   app.delete("/utilisateur/:id", (req, res) => {
     const userId = req.params.id;
@@ -219,6 +247,45 @@ app.put("/groupement/:id", (req, res) => {
   
       return res.json({ message: "User deleted successfully" });
     });
+  });
+  
+  app.post("/benefs/upload", (req, res) => {
+    try {
+      if (!req.files || Object.keys(req.files).length === 0) {
+        return res.status(400).send("No files were uploaded.");
+      }
+  
+      const file = req.files.file;
+      const fileName = file.name;
+  
+      // Save the file to the server
+      file.mv(`./uploads/${fileName}`, (err) => {
+        if (err) {
+          return res.status(500).send(err);
+        }
+  
+        // Read the CSV file and insert data into the 'beneficiaire' table
+        const csvData = fs.readFileSync(`./uploads/${fileName}`, 'utf8');
+        const parsedData = csv.parse(csvData, { columns: true });
+  
+        // Insert data into the 'beneficiaire' table
+        // Adjust this part based on your 'beneficiaire' table structure
+        parsedData.forEach((row) => {
+          const sql = "INSERT INTO béneficiaire (Grp_code, Ben_Nom, Ben_Adresse, Ben_code) VALUES (?, ?, ?, ?, ?)";
+          db.query(sql, [row.Ben_id, row.Grp_code, row.Ben_Nom, row.Ben_Adresse, row.Ben_code], (err, result) => {
+            if (err) {
+              console.error("Error inserting data:", err);
+              return res.status(500).json({ error: "Internal Server Error", details: err });
+            }
+          });
+        });
+  
+        res.send("File uploaded and data inserted into 'beneficiaire' table.");
+      });
+    } catch (error) {
+      console.error("Error handling file upload:", error);
+      return res.status(500).json({ error: "Internal Server Error", details: error });
+    }
   });
 
 app.listen(8081, () => {
