@@ -189,27 +189,28 @@ app.put("/groupement/:id", (req, res) => {
   });
   // POST endpoint to add a new envoi
   app.post("/envoi", (req, res) => {
-    const { Env_num, Env_poids, Env_exp, Env_dest, Env_date_depot } = req.body;
-  
+    const { Env_num, Env_poids,Env_taxe, Env_exp, Env_dest, Env_date_depot, Env_agence_depot } = req.body;
+
     // Log the received Env_date_depot
     console.log('Received Env_date_depot:', Env_date_depot);
-  
+
     // Get the current date and time
     const currentDate = new Date();
     const formattedDate = currentDate.toISOString().slice(0, 19).replace("T", " ");
-  
-    const sql = "INSERT INTO envoi (Env_num, Env_poids, Env_exp, Env_dest, Env_date_depot) VALUES (?, ?, ?, ?, ?)";
-    db.query(sql, [Env_num, Env_poids, Env_exp, Env_dest, Env_date_depot], (err, result) => {
-      if (err) {
-        console.error("Error adding envoi:", err);
-  
-        // Send the error details in the response for debugging purposes
-        return res.status(500).json({ error: "Internal Server Error", details: err });
-      }
-  
-      return res.status(201).json({ message: "Envoi added successfully", envoiId: result.insertId });
+
+    const sql = "INSERT INTO envoi (Env_num, Env_poids,Env_taxe, Env_exp, Env_dest, Env_date_depot, Env_agence_depot) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    db.query(sql, [Env_num, Env_poids,Env_taxe, Env_exp, Env_dest, formattedDate.slice(0, 10), Env_agence_depot], (err, result) => {
+        if (err) {
+            console.error("Error adding envoi:", err);
+
+            // Send the error details in the response for debugging purposes
+            return res.status(500).json({ error: "Internal Server Error", details: err });
+        }
+
+        return res.status(201).json({ message: "Envoi added successfully", envoiId: result.insertId });
     });
-  });
+});
+
    
   app.post("/benefs", (req, res) => {
     const { Grp_code, Ben_Nom, Ben_Addresse, Ben_code } = req.body;
@@ -283,6 +284,15 @@ app.put("/groupement/:id", (req, res) => {
       return res.status(500).json({ error: "Internal Server Error", details: error });
     }
   });
+  app.get("/groupement/:grpCode", (req, res) => {
+    const grpCode = req.params.grpCode;
+    const sql = "SELECT * FROM groupement WHERE Grp_code = ?";
+    db.query(sql, [grpCode], (err, data) => {
+      if (err) return res.status(500).json({ error: "Internal Server Error" });
+      return res.json(data);
+    });
+  });
+  
 
 app.listen(8081, () => {
   console.log("listening");
