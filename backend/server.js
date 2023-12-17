@@ -4,10 +4,13 @@ const mysql = require('mysql');
 const multer = require('multer');
 const path = require('path');
 const upload = multer({ dest: 'uploads/' });
+const bodyParser = require('body-parser');
+
 
 const app = express();
 app.use(cors());
 app.use(express.json());  // Enable JSON request parsing
+app.use(bodyParser.json());
 
 const db = mysql.createConnection({
   host: "localhost",
@@ -17,15 +20,6 @@ const db = mysql.createConnection({
   timezone : "utc"
 });
 
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Specify the directory where you want to store the uploaded files
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname)); // Rename the file with a timestamp and its original extension
-  },
-});
 
 
 db.connect((err) => {
@@ -220,15 +214,17 @@ app.put("/groupement/:id", (req, res) => {
   app.post("/benefs", (req, res) => {
     const { Grp_code, Ben_Nom, Ben_Addresse, Ben_code } = req.body;
     const sql = "INSERT INTO béneficiaire (Grp_code, Ben_Nom, Ben_Addresse, Ben_code) VALUES (?,?,?,?)";
+  
     db.query(sql, [Grp_code, Ben_Nom, Ben_Addresse, Ben_code], (err, result) => {
-        if (err) {
-            console.error("Error adding beneficiaire :", err);
-            return res.status(500).json({ error: "internal Server Error", details: err });
-        }
-        return res.status(201).json({ message: "beneficiaire added successfully", beneficiaireId: result.insertId });
+      if (err) {
+        console.error("Error adding beneficiaire :", err);
+        return res.status(500).json({ error: "Internal Server Error", details: err });
+      }
+  
+      return res.status(201).json({ message: "Beneficiaire added successfully", beneficiaireId: result.insertId });
     });
-});
-
+  });
+  
 
   // Delete a user
   app.delete("/utilisateur/:id", (req, res) => {
