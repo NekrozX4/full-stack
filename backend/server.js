@@ -12,6 +12,8 @@ app.use(cors());
 app.use(express.json());  // Enable JSON request parsing
 app.use(bodyParser.json());
 
+
+
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -20,6 +22,48 @@ const db = mysql.createConnection({
   timezone : "utc"
 });
 
+
+app.post("/envoi/upload", (req, res) => {
+  try {
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).send("No files were uploaded.");
+    }
+
+    const file = req.files.file;
+    const fileName = file.name;
+
+    // Save the file to the server
+    file.mv(`./uploads/${fileName}`, (err) => {
+      if (err) {
+        return res.status(500).send(err);
+      }
+
+      // Read the CSV file and insert data into the 'envoi' table
+      const csvData = fs.readFileSync(`./uploads/${fileName}`, 'utf8');
+      const parsedData = csv.parse(csvData, { columns: true });
+
+      // Insert data into the 'envoi' table
+      // Adjust this part based on your 'envoi' table structure
+      parsedData.forEach((row) => {
+        const currentDate = new Date();
+        const formattedDate = currentDate.toISOString().slice(0, 19).replace("T", " ");
+
+        const sql = "INSERT INTO envoi (Env_num, Env_poids, Env_taxe, Env_exp, Env_dest, Env_date_depot, Env_agence_depot) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        db.query(sql, [row.Env_num, row.Env_poids, row.Env_taxe, row.Env_exp, row.Env_dest, formattedDate.slice(0, 10), row.Env_agence_depot], (err, result) => {
+          if (err) {
+            console.error("Error inserting data:", err);
+            return res.status(500).json({ error: "Internal Server Error", details: err });
+          }
+        });
+      });
+
+      res.send("File uploaded and data inserted into 'envoi' table.");
+    });
+  } catch (error) {
+    console.error("Error handling file upload:", error);
+    return res.status(500).json({ error: "Internal Server Error", details: error });
+  }
+});
 
 
 db.connect((err) => {
